@@ -48,6 +48,13 @@ import javax.crypto.SecretKeyFactory;
 import javax.security.auth.DestroyFailedException;
 import javax.security.auth.Destroyable;
 
+import com.nimbusds.jose.JOSEObjectType;
+import com.nimbusds.jose.JWSAlgorithm;
+import com.nimbusds.jose.crypto.RSASSASigner;
+import com.nimbusds.jose.JWSSigner;
+import com.nimbusds.jose.JWSHeader;
+import com.nimbusds.jose.util.Base64URL;
+
 /**
  * This sample demonstrates how to work with keys. This could be importing keys, exporting keys, loading keys by handle,
  * or deleting keys.
@@ -167,7 +174,10 @@ public class KeyUtilitiesRunner {
                     key = getKeyByUsingAttributesMap(label, keyType);
                 }
                 if (null != key) {
-                    System.out.println("Fetched key with label: " + label);
+                    System.out.println("Fetched key with label. Proceeding to Sign the payload");
+                    String jsonPayload= "{ \"Bank Name\": \"ICICI\",\"Country\": \"India\" }";
+                    String jwsValue = getJWSValue(label,jsonPayload,"randomSerialNo",(PrivateKey)key);
+                    System.out.println("SIGNED Payload signed  and SIGNED JWS VALUE :{} "+ jwsValue);
                 } else {
                     System.out.println("Could not find the given key label " + label);
                 }
@@ -177,6 +187,20 @@ public class KeyUtilitiesRunner {
                 deleteKey(label);
                 break;
             }
+        }
+    }
+
+    public static String getJWSValue(String label, String json, String serialNo, PrivateKey privateKey) throws Exception {
+        try {
+            System.out.println("Fetched key with label: " + label);
+            JWSSigner signer = new RSASSASigner(privateKey);
+            String payload = Base64.getEncoder().encodeToString(json.getBytes());
+            JWSHeader joseHeader = new JWSHeader.Builder(JWSAlgorithm.RS512).keyID(serialNo).type(JOSEObjectType.JWT).build();
+            Base64URL signature = signer.sign(joseHeader, payload.getBytes());
+            return joseHeader.toBase64URL() + "." + payload + "." + signature.toString();
+        } catch (Exception e) {
+            System.out.println("Error in getJWSValue : "+ e);
+            throw e;
         }
     }
 
